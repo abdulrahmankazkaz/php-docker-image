@@ -1,7 +1,4 @@
 FROM ghcr.io/roadrunner-server/roadrunner:2025.1.2 AS roadrunner
-
-FROM php:8.4-cli-bookworm AS php-builder
-
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       ca-certificates \
@@ -23,9 +20,7 @@ RUN apt-get update \
 FROM debian:bookworm-slim
 
 ENV DEBIAN_FRONTEND=noninteractive \
-    TZ=Asia/Baghdad \
-    ROADRUNNER_BINARY="/usr/local/bin/rr" \
-    PATH="/app/vendor/bin:${PATH}"
+    TZ=Asia/Baghdad 
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
@@ -38,8 +33,6 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 COPY --from=php-builder /usr/local/ /usr/local/
-
-COPY --from=roadrunner /usr/bin/rr ${ROADRUNNER_BINARY}
 
 COPY php.ini /usr/local/etc/php/conf.d/zz-php.ini
 
