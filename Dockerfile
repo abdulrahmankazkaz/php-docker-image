@@ -1,4 +1,5 @@
-FROM ghcr.io/roadrunner-server/roadrunner:2025.1.2 AS roadrunner
+FROM php:8.4-cli-bookworm AS php-builder
+
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       ca-certificates \
