@@ -1,5 +1,5 @@
 # Use the PHP 8.4 CLI image as the builder stage base
-FROM php:8.4-cli-bookworm as php-builder
+FROM php:8.4-cli-bookworm AS php-builder
 
 # Prepare the builder stage with all required tools and headers
 RUN set -eux; \
