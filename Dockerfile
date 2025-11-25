@@ -1,11 +1,10 @@
-# Use the PHP 8.4 CLI image as the builder stage base
+# ============================
+#       BUILDER STAGE
+# ============================
 FROM php:8.4-cli-bookworm AS php-builder
 
-# Prepare the builder stage with all required tools and headers
 RUN set -eux; \
-    apt-get update -y
-
-RUN set -eux; \
+    apt-get update -y; \
     apt-get install -y --no-install-recommends \
         ca-certificates \
         pkg-config \
@@ -17,52 +16,45 @@ RUN set -eux; \
         libjpeg62-turbo-dev \
         libfreetype6-dev \
         libicu-dev \
-        libmagickwand-dev 
+        libmagickwand-dev
 
-# Compile the imagick extension through PECL (pin version) + clean
-RUN set -eux; \
-    pecl install imagick
+# Install imagick
+RUN pecl install imagick && docker-php-ext-enable imagick
 
-RUN set -eux; \
-    docker-php-ext-enable imagick
+# Configure gd
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg
 
-# Configure the gd extension to rely on system JPEG and freetype
-RUN set -eux; \
-    docker-php-ext-configure gd --with-freetype --with-jpeg
-
-# Build the required PHP extensions in parallel to speed up the process
-RUN set -eux; \
-    docker-php-ext-install -j"$(nproc)" \
+# Install PHP extensions
+RUN docker-php-ext-install -j"$(nproc)" \
         bcmath \
         gd \
         intl \
         pcntl \
         pdo_mysql \
         zip \
-        opcache
+        opcache \
+        sockets
 
-# Remove the PHP source tree because it is no longer needed
-RUN set -eux; \
-    docker-php-source delete
+# Remove php source
+RUN docker-php-source delete
 
-# Optional: shrink builder layer and binaries (affects final size after copy)
+# Strip binary sizes (REAL strip)
 RUN set -eux; \
-    apt-get purge -y --auto-remove build-essential pkg-config \
-        libxml2-dev libssl-dev libzip-dev libpng-dev libjpeg62-turbo-dev \
-        libfreetype6-dev libicu-dev libmagickwand-dev || true
+    find /usr/local -type f -name "*.so" -exec strip --strip-unneeded {} + || true; \
+    find /usr/local/bin -type f -exec strip --strip-all {} + || true
 
+# Final builder cleanup
 RUN set -eux; \
+    apt-get purge -y --auto-remove build-essential pkg-config libxml2-dev libssl-dev libzip-dev \
+        libpng-dev libjpeg62-turbo-dev libfreetype6-dev libicu-dev libmagickwand-dev || true; \
     rm -rf /var/lib/apt/lists/* /tmp/pear
 
-# Strip binaries and shared objects to reduce size
-RUN set -eux; \
-    command -v strip >/dev/null 2>&1 || true
 
-
-# Start the runtime stage from a slim Debian base
+# ============================
+#       RUNTIME STAGE
+# ============================
 FROM debian:bookworm-slim
 
-# Install the runtime libraries required by PHP and compiled extensions
 RUN <<'BASH'
 set -eux
 apt-get update -y
@@ -79,37 +71,39 @@ apt-get install -y --no-install-recommends \
     libreadline8 \
     libsqlite3-0 \
     libcurl4 \
+    libsodium23 \
     libonig5 \
     libmagickwand-6.q16-6 \
     libmagickcore-6.q16-6
 rm -rf /var/lib/apt/lists/*
 BASH
 
-# Copy the compiled PHP binaries and modules from the builder stage
+# Copy PHP from builder
 COPY --from=php-builder /usr/local/ /usr/local/
 
-# Provide the project-specific PHP runtime configuration
+# Provide runtime configs
 COPY php.ini /usr/local/etc/php/conf.d/zz-php.ini
 
-# Provide the opcache tuning that accompanies this image
-COPY opcache.ini /usr/local/etc/php/conf.d/zz-opcache.ini
-
-# Create the non-root app user and clean up documentation to reduce size
+# Create non-root user
 RUN <<'BASH'
 set -eux
 groupadd -f -g 1000 app
 useradd -u 1000 -g app -s /usr/sbin/nologin -M app
 install -d -o app -g app -m 0750 /app
+
+# Clean unneeded locales/docs
 rm -rf /usr/share/doc /usr/share/man /usr/share/locale/* || true
-rm -f /usr/local/etc/php/conf.d/*sodium*.ini
+
+# Disable unwanted ImageMagick coders for security
+f=/etc/ImageMagick-6/policy.xml
+for p in PDF PS XPS EPS MVG MSL TEXT URL EPHEMERAL HTTPS HTTP; do
+  sed -i "s#<policy domain=\"coder\" rights=\"\(read\|write\)\" pattern=\"$p\"/>#<policy domain=\"coder\" rights=\"none\" pattern=\"$p\"/>#g" "$f" || true
+done
 BASH
 
-RUN set -eux; f=/etc/ImageMagick-6/policy.xml; \
-  for p in PDF PS XPS EPS MVG MSL TEXT URL EPHEMERAL HTTPS HTTP; do \
-    sed -i "s#<policy domain=\"coder\" rights=\"\(read\|write\)\" pattern=\"$p\"/>#<policy domain=\"coder\" rights=\"none\" pattern=\"$p\"/>#g" "$f" || true; \
-  done
+# Ensure PHP binary path works
+ENV PATH="/usr/local/bin:/usr/local/sbin:${PATH}"
 
-# Run the container with the unprivileged app user by default
 USER app
-EXPOSE 8000
 WORKDIR /app
+EXPOSE 8000
