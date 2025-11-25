@@ -1,4 +1,4 @@
-name: Docker Image CI
+name: Build PHP Image
 
 on:
   workflow_dispatch:
@@ -17,5 +17,5 @@ jobs:
       - uses: docker/build-push-action@v6.18.0
         with:
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           tags: ghcr.io/${{ github.repository_owner}}/php:8.4
