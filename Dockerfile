@@ -3,51 +3,24 @@
 # ============================
 FROM php:8.4-cli-bookworm AS php-builder
 
-RUN set -eux; \
-    apt-get update -y; \
-    apt-get install -y --no-install-recommends \
-        ca-certificates \
-        pkg-config \
-        build-essential \
-        libxml2-dev \
-        libssl-dev \
-        libzip-dev \
-        libpng-dev \
-        libjpeg62-turbo-dev \
-        libfreetype6-dev \
-        libicu-dev \
-        libmagickwand-dev
-
-# Install imagick
-RUN pecl install imagick && docker-php-ext-enable imagick
-
-# Configure gd
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg
-
-# Install PHP extensions
-RUN docker-php-ext-install -j"$(nproc)" \
-        bcmath \
-        gd \
-        intl \
-        pcntl \
-        pdo_mysql \
-        zip \
-        opcache \
-        sockets
-
-# Remove php source
-RUN docker-php-source delete
-
-# Strip binary sizes (REAL strip)
-RUN set -eux; \
-    find /usr/local -type f -name "*.so" -exec strip --strip-unneeded {} + || true; \
-    find /usr/local/bin -type f -exec strip --strip-all {} + || true
-
-# Final builder cleanup
-RUN set -eux; \
-    apt-get purge -y --auto-remove build-essential pkg-config libxml2-dev libssl-dev libzip-dev \
-        libpng-dev libjpeg62-turbo-dev libfreetype6-dev libicu-dev libmagickwand-dev || true; \
-    rm -rf /var/lib/apt/lists/* /tmp/pear
+RUN set -eux \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends \
+      ca-certificates pkg-config build-essential \
+      libxml2-dev libssl-dev libzip-dev libpng-dev \
+      libjpeg62-turbo-dev libfreetype6-dev libicu-dev \
+      libmagickwand-dev \
+ && pecl install imagick \
+ && docker-php-ext-enable imagick \
+ && docker-php-ext-configure gd --with-freetype --with-jpeg \
+ && docker-php-ext-install -j"$(nproc)" bcmath gd intl pcntl pdo_mysql zip opcache \
+ && docker-php-source delete \
+ && find /usr/local/lib/php/extensions/ -type f -name "*.so" -exec strip --strip-unneeded {} + || true \
+ && strip --strip-all /usr/local/bin/php || true \
+ && apt-get purge -y --auto-remove \
+      build-essential pkg-config libxml2-dev libssl-dev libzip-dev \
+      libpng-dev libjpeg62-turbo-dev libfreetype6-dev libicu-dev libmagickwand-dev \
+ && rm -rf /var/lib/apt/lists/* /tmp/pear
 
 
 # ============================
@@ -55,38 +28,18 @@ RUN set -eux; \
 # ============================
 FROM debian:bookworm-slim
 
-RUN <<'BASH'
-set -eux
-apt-get update -y
-apt-get install -y --no-install-recommends \
-    ca-certificates \
-    libxml2 \
-    libssl3 \
-    libpng16-16 \
-    libzip4 \
-    libjpeg62-turbo \
-    libfreetype6 \
-    libicu72 \
-    libargon2-1 \
-    libreadline8 \
-    libsqlite3-0 \
-    libcurl4 \
-    libsodium23 \
-    libonig5 \
-    libmagickwand-6.q16-6 \
-    libmagickcore-6.q16-6
-rm -rf /var/lib/apt/lists/*
-BASH
-
-RUN apt-get update && \
-    apt-get install -y curl && \
-    curl -fsSL https://key.henderkes.com/static-php.gpg -o /usr/share/keyrings/static-php.gpg && \
-    echo "deb [signed-by=/usr/share/keyrings/static-php.gpg] https://deb.henderkes.com/ stable main" > /etc/apt/sources.list.d/static-php.list && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends frankenphp && \
-    apt-get remove curl && \
-    apt-get purge -y curl && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN set -eux \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends \
+      ca-certificates libxml2 libssl3 libpng16-16 libzip4 libjpeg62-turbo \
+      libfreetype6 libicu72 libargon2-1 libreadline8 libsqlite3-0 libcurl4 \
+      libsodium23 libonig5 libmagickwand-6.q16-6 libmagickcore-6.q16-6 curl \
+ && curl -fsSL https://key.henderkes.com/static-php.gpg -o /usr/share/keyrings/static-php.gpg \
+ && echo "deb [signed-by=/usr/share/keyrings/static-php.gpg] https://deb.henderkes.com/ stable main" \
+    > /etc/apt/sources.list.d/static-php.list \
+ && apt-get update && apt-get install -y --no-install-recommends frankenphp \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
 
 # Copy PHP from builder
 COPY --from=php-builder /usr/local/ /usr/local/
@@ -117,8 +70,11 @@ ENV PATH="/usr/local/bin:/usr/local/sbin:${PATH}"
 COPY --chown=app:app docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod 0550 /usr/local/bin/docker-entrypoint.sh
 
+
 USER app
 
 WORKDIR /app
 
 EXPOSE 8000
+
+ENTRYPOINT [ "/usr/local/bin/docker-entrypoint.sh" ]
