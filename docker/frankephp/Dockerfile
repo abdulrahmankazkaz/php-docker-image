@@ -13,7 +13,7 @@ RUN set -eux \
  && pecl install imagick \
  && docker-php-ext-enable imagick \
  && docker-php-ext-configure gd --with-freetype --with-jpeg \
- && docker-php-ext-install -j"$(nproc)" bcmath gd intl pcntl pdo_mysql zip opcache \
+ && docker-php-ext-install -j"$(nproc)" bcmath gd intl pcntl pdo_mysql pdo zip opcache \
  && docker-php-source delete \
  && find /usr/local/lib/php/extensions/ -type f -name "*.so" -exec strip --strip-unneeded {} + || true \
  && strip --strip-all /usr/local/bin/php || true \
