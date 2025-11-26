@@ -5,20 +5,20 @@ set -e
 echo "🔧 Preparing The Project... If it breaks, we didn’t see anything 👀🔥"
 
 # Clear stale caches first
-php artisan optimize:clear --quiet || true
+frankenphp php-cli artisan optimize:clear --quiet || true
 
 # Discover packages (autoload rebuild-like step)
-php artisan package:discover --quiet --no-ansi
+frankenphp php-cli artisan package:discover --quiet --no-ansi
 
 # Build caches
-php artisan config:cache --quiet
-php artisan route:cache --quiet
-php artisan view:cache --quiet
-php artisan event:cache --quiet
+frankenphp php-cli artisan config:cache --quiet
+frankenphp php-cli artisan route:cache --quiet
+frankenphp php-cli artisan view:cache --quiet
+frankenphp php-cli artisan event:cache --quiet
 
 echo "🔮 Summoning FrankenPHP on port 8000... Please fasten your seatbelts 😈🚀"
 
-exec php artisan octane:frankenphp \
+exec frankenphp php-cli artisan octane:frankenphp \
     --host=0.0.0.0 \
     --port=8000 \
     --workers=4 \

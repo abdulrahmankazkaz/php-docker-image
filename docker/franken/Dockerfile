@@ -56,8 +56,13 @@ RUN set -eux; \
     useradd -u 1000 -g app -s /usr/sbin/nologin -M app; \
     install -d -o app -g app -m 0750 /app
 
+
+COPY --chown=app:app docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod 0550 /usr/local/bin/docker-entrypoint.sh
+
+
 WORKDIR /app
-
 USER app
-
 EXPOSE 8000
+
+ENTRYPOINT [ "/usr/local/bin/docker-entrypoint.sh" ]
