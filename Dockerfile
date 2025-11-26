@@ -1,7 +1,7 @@
 FROM debian:trixie-slim AS build
 
 ENV PHP_VERSION=8.4.14 \
-    MAKEFLAGS="-j1"
+    MAKEFLAGS="-j$(nproc)"
 
 RUN apt update -y && apt install -y --no-install-recommends \
     ca-certificates build-essential autoconf bison re2c pkg-config \
