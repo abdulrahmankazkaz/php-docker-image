@@ -78,6 +78,16 @@ apt-get install -y --no-install-recommends \
 rm -rf /var/lib/apt/lists/*
 BASH
 
+RUN apt-get update && \
+    apt-get install -y curl && \
+    curl -fsSL https://key.henderkes.com/static-php.gpg -o /usr/share/keyrings/static-php.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/static-php.gpg] https://deb.henderkes.com/ stable main" > /etc/apt/sources.list.d/static-php.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends frankenphp && \
+    apt-get remove curl && \
+    apt-get purge -y curl && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
 # Copy PHP from builder
 COPY --from=php-builder /usr/local/ /usr/local/
 
@@ -104,6 +114,11 @@ BASH
 # Ensure PHP binary path works
 ENV PATH="/usr/local/bin:/usr/local/sbin:${PATH}"
 
+COPY --chown=app:app docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod 0550 /usr/local/bin/docker-entrypoint.sh
+
 USER app
+
 WORKDIR /app
+
 EXPOSE 8000
