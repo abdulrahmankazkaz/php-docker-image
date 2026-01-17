@@ -5,7 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN set -eux; \
     apt update -y;
 
-RUN install-php-extensions bcmath gd intl pcntl imagick pdo_mysql zip 
+RUN install-php-extensions bcmath gd intl pcntl imagick pdo_mysql zip opcache 
 
 RUN rm -rf /usr/share/doc /usr/share/man /usr/share/locale/* || true
 
