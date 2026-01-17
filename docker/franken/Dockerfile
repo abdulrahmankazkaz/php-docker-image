@@ -1,32 +1,15 @@
-FROM debian:trixie-slim AS build
+FROM dunglas/frankenphp
 
 ENV DEBIAN_FRONTEND=noninteractive 
 
 RUN set -eux; \
-    apt update -y; \
-    apt install -y --no-install-recommends \
-        ca-certificates \
-        curl \
-        gnupg; \
-    update-ca-certificates
+    apt update -y;
 
-RUN curl https://frankenphp.dev/install.sh | sh
-
-RUN apt install -y --no-install-recommends \
-      php-zts-bcmath \
-      php-zts-intl \
-      php-zts-gd \
-      php-zts-imagick \
-      php-zts-pdo \
-      php-zts-pdo-mysql \
-      php-zts-zip \
-      php-zts-fileinfo \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+RUN install-php-extensions bcmath gd intl pcntl imagick pdo_mysql zip 
 
 RUN rm -rf /usr/share/doc /usr/share/man /usr/share/locale/* || true
 
-COPY php.ini /etc/php-zts/php.ini
+COPY php.ini /usr/local/etc/php
 
 RUN set -eux; \
     groupadd -f -g 1000 app; \
