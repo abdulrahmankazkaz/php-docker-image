@@ -10,13 +10,9 @@ RUN set -eux; \
         gnupg; \
     update-ca-certificates
 
-RUN curl -fsSL https://key.henderkes.com/static-php.gpg -o /usr/share/keyrings/static-php.gpg && \
-    echo "deb [signed-by=/usr/share/keyrings/static-php.gpg] https://deb.henderkes.com/ stable main" \
-      > /etc/apt/sources.list.d/static-php.list && \
-    apt update -y
+RUN curl https://frankenphp.dev/install.sh | sh
 
 RUN apt install -y --no-install-recommends \
-      frankenphp \
       php-zts-bcmath \
       php-zts-intl \
       php-zts-gd \
@@ -28,24 +24,6 @@ RUN apt install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-FROM debian:trixie-slim
-
-ENV DEBIAN_FRONTEND=noninteractive \
-    PHP_INI_DIR=/etc/php-zts
-
-RUN set -eux; \
-    apt update -y; \
-    apt install -y --no-install-recommends \
-      ca-certificates \
-      curl; \
-    update-ca-certificates; \
-    apt-get clean; \
-    rm -rf /var/lib/apt/lists/*
-
-COPY --from=build /usr/bin/ /usr/bin/
-COPY --from=build /usr/lib/ /usr/lib/
-COPY --from=build /etc/ /etc/
-
 RUN rm -rf /usr/share/doc /usr/share/man /usr/share/locale/* || true
 
 COPY php.ini /etc/php-zts/php.ini
@@ -55,13 +33,12 @@ RUN set -eux; \
     useradd -u 1000 -g app -s /usr/sbin/nologin -M app; \
     install -d -o app -g app -m 0750 /app
 
-
 COPY --chown=app:app docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod 0550 /usr/local/bin/docker-entrypoint.sh
-
 
 WORKDIR /app
 USER app
 EXPOSE 8000
 
 ENTRYPOINT [ "/usr/local/bin/docker-entrypoint.sh" ]
+
