@@ -42,10 +42,9 @@ RUN set -eux; \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/*
 
-COPY --from=build /usr/bin/frankenphp /usr/bin/frankenphp
-COPY --from=build /usr/lib/php-zts /usr/lib/php-zts
-COPY --from=build /usr/lib/libphp-zts-84.so /usr/lib/libphp-zts-84.so
-COPY --from=build /etc/php-zts /etc/php-zts
+COPY --from=build /usr/bin/ /usr/bin/
+COPY --from=build /usr/lib/ /usr/lib/
+COPY --from=build /etc/ /etc/
 
 RUN rm -rf /usr/share/doc /usr/share/man /usr/share/locale/* || true
 
